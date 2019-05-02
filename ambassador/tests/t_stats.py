@@ -8,7 +8,7 @@ class StatsdTest(AmbassadorTest):
 
     envs = {
         'STATSD_ENABLED': 'true',
-        'STATSD_HOST': 'statsd'
+        'STATSD_HOST': 'statsdtest-statsd'
     }
 
     configs = {
@@ -26,12 +26,12 @@ name:  {self.name}-reset
 case_sensitive: false
 prefix: /reset/
 rewrite: /RESET/
-service: statsd
+service: statsdtest-statsd
 '''
     }
 
     extra_pods = {
-        'statsd': {
+        'statsdtest-statsd': {
             'image': 'dwflynn/stats-test:0.1.0',
             'envs': {
                 'STATSD_TEST_CLUSTER': "cluster_http___statsdtest_http",
@@ -86,14 +86,14 @@ service: statsd
         self.target = HTTP()
 
     def requirements(self):
-        yield ("url", Query("http://statsd/RESET/"))
+        yield ("url", Query("http://statsdtest-statsd/RESET/"))
         yield ("url", Query(self.url("RESET/")))
 
     def queries(self):
         for i in range(1000):
             yield Query(self.url(self.name + "/"), phase=1)
 
-        yield Query("http://statsd/DUMP/", phase=2)
+        yield Query("http://statsdtest-statsd/DUMP/", phase=2)
 
     def check(self):
         stats = self.results[-1].json or {}
@@ -111,7 +111,7 @@ class DogstatsdTest(AmbassadorTest):
 
     envs = {
         'STATSD_ENABLED': 'true',
-        'STATSD_HOST': 'statsd',
+        'STATSD_HOST': 'dogstatsdtest-statsd',
         'DOGSTATSD': 'true'
     }
 
@@ -130,12 +130,12 @@ name:  {self.name}-reset
 case_sensitive: false
 prefix: /reset/
 rewrite: /RESET/
-service: statsd
+service: dogstatsdtest-statsd
 '''
     }
 
     extra_pods = {
-        'statsd': {
+        'dogstatsdtest-statsd': {
             'image': 'dwflynn/stats-test:0.1.0',
             'envs': {
                 'STATSD_TEST_CLUSTER': "cluster_http___dogstatsdtest_http"
@@ -189,14 +189,14 @@ service: statsd
         self.target = HTTP()
 
     def requirements(self):
-        yield ("url", Query("http://statsd/RESET/"))
+        yield ("url", Query("http://dogstatsdtest-statsd/RESET/"))
         yield ("url", Query(self.url("RESET/")))
 
     def queries(self):
         for i in range(1000):
             yield Query(self.url(self.name + "/"), phase=1)
 
-        yield Query("http://statsd/DUMP/", phase=2)
+        yield Query("http://dogstatsdtest-statsd/DUMP/", phase=2)
 
     def check(self):
         stats = self.results[-1].json or {}
