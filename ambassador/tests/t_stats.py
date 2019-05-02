@@ -93,10 +93,10 @@ service: statsd
         for i in range(1000):
             yield Query(self.url(self.name + "/"), phase=1)
 
-        yield Query("http://statsd/DUMP/", phase=2, debug=True)
+        yield Query("http://statsd/DUMP/", phase=2)
 
     def check(self):
-        stats = self.results[-1].json
+        stats = self.results[-1].json or {}
 
         cluster_stats = stats.get('cluster_http___statsdtest_http', {})
         rq_total = cluster_stats.get('upstream_rq_total', -1)
@@ -196,10 +196,10 @@ service: statsd
         for i in range(1000):
             yield Query(self.url(self.name + "/"), phase=1)
 
-        yield Query("http://statsd/DUMP/", phase=2, debug=True)
+        yield Query("http://statsd/DUMP/", phase=2)
 
     def check(self):
-        stats = self.results[-1].json
+        stats = self.results[-1].json or {}
 
         cluster_stats = stats.get('cluster_http___dogstatsdtest_http', {})
         rq_total = cluster_stats.get('upstream_rq_total', -1)
