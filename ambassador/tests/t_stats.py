@@ -4,7 +4,7 @@ from abstract_tests import DEV, AmbassadorTest, HTTP
 
 
 class StatsdTest(AmbassadorTest):
-    # skip_in_dev = True
+    skip_in_dev = True
 
     envs = {
         'STATSD_ENABLED': 'true',
@@ -107,7 +107,7 @@ service: statsd
 
 
 class DogstatsdTest(AmbassadorTest):
-    # skip_in_dev = True
+    skip_in_dev = True
 
     envs = {
         'STATSD_ENABLED': 'true',
