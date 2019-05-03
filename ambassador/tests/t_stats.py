@@ -44,44 +44,6 @@ service: statsdtest-statsd
         }
     }
 
-    # extra_pods = {
-    #     'statsd': {
-    #         'pod': {
-    #             'image': 'dwflynn/stats-test:0.1.0',
-    #             'ports': [
-    #                 {
-    #                     'name': 'statsd-api',
-    #                     'containerPort': 8125,
-    #                     'protocol': 'UDP'
-    #                 },
-    #                 {
-    #                     'name': 'statsd-www',
-    #                     'containerPort': 3000,
-    #                     'protocol': 'TCP'
-    #                 }
-    #             ],
-    #             'envs': {
-    #                 'STATSD_TEST_CLUSTER': "cluster_http___statsdtest_http",
-    #                 # 'STATSD_TEST_DEBUG': 'true'
-    #             }
-    #         },
-    #         'ports': [
-    #             {
-    #                 'port': 8125,
-    #                 'name': 'statsd-api',
-    #                 'targetPort': 'statsd-api',
-    #                 'protocol': 'UDP',
-    #             },
-    #             {
-    #                 'port': 80,
-    #                 'name': 'statsd-www',
-    #                 'targetPort': 'statsd-www',
-    #                 'protocol': 'TCP',
-    #             }
-    #         ]
-    #     }
-    # }
-
     def init(self):
         self.target = HTTP()
 
@@ -146,44 +108,6 @@ service: dogstatsdtest-statsd
             ]
         }
     }
-
-    # extra_pods = {
-    #     'statsd': {
-    #         'pod': {
-    #             'image': 'dwflynn/stats-test:0.1.0',
-    #             'ports': [
-    #                 {
-    #                     'name': 'statsd-api',
-    #                     'containerPort': 8125,
-    #                     'protocol': 'UDP'
-    #                 },
-    #                 {
-    #                     'name': 'statsd-www',
-    #                     'containerPort': 3000,
-    #                     'protocol': 'TCP'
-    #                 }
-    #             ],
-    #             'envs': {
-    #                 'STATSD_TEST_CLUSTER': "cluster_http___dogstatsdtest_http",
-    #                 # 'STATSD_TEST_DEBUG': 'true'
-    #             }
-    #         },
-    #         'ports': [
-    #             {
-    #                 'port': 8125,
-    #                 'name': 'statsd-api',
-    #                 'targetPort': 'statsd-api',
-    #                 'protocol': 'UDP',
-    #             },
-    #             {
-    #                 'port': 80,
-    #                 'name': 'statsd-www',
-    #                 'targetPort': 'statsd-www',
-    #                 'protocol': 'TCP',
-    #             }
-    #         ]
-    #     }
-    # }
 
     def init(self):
         self.target = HTTP()
