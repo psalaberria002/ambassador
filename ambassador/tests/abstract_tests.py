@@ -1,3 +1,6 @@
+from typing import Any, ClassVar, Dict, List, Optional, Sequence, Tuple
+from typing import cast as typecast
+
 import sys
 
 import base64
@@ -15,9 +18,6 @@ try:
     yaml_dumper = yaml.CSafeDumper
 except AttributeError:
     pass
-
-from typing import Any, ClassVar, Dict, List, Optional, Sequence
-from typing import cast as typecast
 
 from kat.harness import abstract_test, sanitize, Name, Node, Test, Query
 from kat import manifests
@@ -397,13 +397,14 @@ class IsolatedServiceType(Node):
 
 
 @abstract_test
-class ServiceType(Node):
-
-    path: Name
+class ServicePod(Node):
     _manifests: Optional[str]
     use_superpod: bool = True
- 
-    def __init__(self, service_manifests: str=None, namespace: str=None, *args, **kwargs) -> None:
+
+    def __init__(self,
+                 namespace: Optional[str] = None,
+                 service_manifests: Optional[str] = None,
+                 *args, **kwargs) -> None:
         if namespace is not None:
             print("%s init %s" % (type(self), namespace))
 
@@ -432,6 +433,15 @@ class ServiceType(Node):
 
         yield ("url", Query("http://%s" % self.path.fqdn))
         yield ("url", Query("https://%s" % self.path.fqdn))
+
+
+class ServiceType(ServicePod):
+    path: Name
+    _manifests: Optional[str]
+    use_superpod: bool = True
+
+    def __init__(self, service_manifests: str = None, namespace: str = None, *args, **kwargs) -> None:
+        super().__init__(service_manifests=service_manifests, namespace=namespace, *args, **kwargs)
 
 
 @abstract_test
