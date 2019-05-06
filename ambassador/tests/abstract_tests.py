@@ -397,7 +397,7 @@ class IsolatedServiceType(Node):
 
 
 @abstract_test
-class ServicePod(Node):
+class ServiceType(Node):
     _manifests: Optional[str]
     use_superpod: bool = True
 
@@ -433,15 +433,6 @@ class ServicePod(Node):
 
         yield ("url", Query("http://%s" % self.path.fqdn))
         yield ("url", Query("https://%s" % self.path.fqdn))
-
-
-class ServiceType(ServicePod):
-    path: Name
-    _manifests: Optional[str]
-    use_superpod: bool = True
-
-    def __init__(self, service_manifests: str = None, namespace: str = None, *args, **kwargs) -> None:
-        super().__init__(service_manifests=service_manifests, namespace=namespace, *args, **kwargs)
 
 
 @abstract_test
