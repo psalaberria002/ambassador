@@ -426,20 +426,21 @@ spec:
       value: {self.path.k8s}
     - name: AMBASSADOR_SNAPSHOT_COUNT
       value: "0"
-    livenessProbe:
-      httpGet:
-        path: /ambassador/v0/check_alive
-        port: 8877
-      initialDelaySeconds: 30
-      periodSeconds: 3
-    readinessProbe:
-      httpGet:
-        path: /ambassador/v0/check_ready
-        port: 8877
-      initialDelaySeconds: 30
-      periodSeconds: 3
   restartPolicy: Always
 """
+
+    # livenessProbe:
+    #   httpGet:
+    #     path: /ambassador/v0/check_alive
+    #     port: 8877
+    #   initialDelaySeconds: 30
+    #   periodSeconds: 3
+    # readinessProbe:
+    #   httpGet:
+    #     path: /ambassador/v0/check_ready
+    #     port: 8877
+    #   initialDelaySeconds: 30
+    #   periodSeconds: 3
 
 HTTPBIN = """
 ---
