@@ -4,16 +4,10 @@
 
 ### DEFAULT PORTS CHANGED IN AMBASSADOR 0.60
 
-Ambassador 0.60 will, by default, listen for cleartext HTTP on port 8080 (rather than 80),
+Ambassador 0.60 by default listens for cleartext HTTP on port 8080 (rather than 80),
 and for HTTPS on port 8443 (rather than 443), in order to simplify running Ambassador without
 root privileges. If you are relying on the default port numbering in your installation, **you
 will need to change your configuration**.
-
-### AMBASSADOR 0.53.1
-
-The current recommended version of Ambassador is 0.53.1. **This release includes fixes for two
-security issues**; as such, it is strongly recommended that you upgrade from any earlier release
-to 0.53.1. See below for more information.
 
 ### AMBASSADOR 0.50+
 
@@ -88,6 +82,38 @@ Format:
 --->
 
 <!--- CueAddReleaseNotes --->
+## [0.70.1] May 24, 2019
+[0.70.1]: https://github.com/datawire/ambassador/compare/0.70.0...0.70.1
+
+### Minor changes:
+- Bugfix: Disable CRD support if Ambassador cannot access them
+- Upgrade: Upgrade to watt 0.5.1
+
+## [0.70.0] May 20, 2019
+[0.70.0]: https://github.com/datawire/ambassador/compare/0.61.0...0.70.0
+
+### Major changes:
+- Feature: Support CRDs in the `getambassador.io` API group for configuration ([#482])
+- Feature: Update to Envoy 1.10 
+
+### Minor changes:
+- Feature: Support removing request headers (thanks @ysaakpr!)
+- Bugfix: `watt` should better coalesce calls to the watch hook on startup
+- Bugfix: Ambassador no longer uses ports 7000 or 18000 ([#1526], [#1527])
+
+[#482]: https://github.com/datawire/ambassador/issues/482
+[#1526]: https://github.com/datawire/ambassador/issues/1526
+[#1527]: https://github.com/datawire/ambassador/issues/1527
+
+## [0.61.1] May 16, 2019
+[0.61.1]: https://github.com/datawire/ambassador/compare/0.61.0...0.61.1
+
+- Bugfix: Make sure that Consul discovery properly handles the datacenter name ([#1533])
+- Bugfix: Make sure that the feature-walk code is protected against clusters with no endpoints at all ([#1532])
+
+[#1532]: https://github.com/datawire/ambassador/issues/1532
+[#1533]: https://github.com/datawire/ambassador/issues/1533
+
 ## [0.61.0] May 08, 2019
 [0.61.0]: https://github.com/datawire/ambassador/compare/0.60.3...0.61.0
 

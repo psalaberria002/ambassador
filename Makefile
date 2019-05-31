@@ -130,16 +130,16 @@ NETLIFY_SITE=datawire-ambassador
 # IF YOU MESS WITH ANY OF THESE VALUES, YOU MUST UPDATE THE VERSION NUMBERS
 # BELOW AND THEN RUN make docker-update-base
 ENVOY_REPO ?= git://github.com/datawire/envoy.git
-ENVOY_COMMIT ?= 5830eaa1db54cb72161a181b310f895fe0d5a723
+ENVOY_COMMIT ?= a484da25f765a28546b0f312115a8a346959f15c
 AMBASSADOR_DOCKER_TAG ?= $(GIT_VERSION)
 AMBASSADOR_DOCKER_IMAGE ?= $(AMBASSADOR_DOCKER_REPO):$(AMBASSADOR_DOCKER_TAG)
 AMBASSADOR_EXTERNAL_DOCKER_IMAGE ?= $(AMBASSADOR_EXTERNAL_DOCKER_REPO):$(AMBASSADOR_DOCKER_TAG)
 
 # UPDATE THESE VERSION NUMBERS IF YOU UPDATE ANY OF THE VALUES ABOVE, THEN
 # RUN make docker-update-base.
-ENVOY_BASE_IMAGE ?= quay.io/datawire/ambassador-base:envoy-10
-AMBASSADOR_DOCKER_IMAGE_CACHED ?= quay.io/datawire/ambassador-base:go-10
-AMBASSADOR_BASE_IMAGE ?= quay.io/datawire/ambassador-base:ambassador-10
+ENVOY_BASE_IMAGE ?= quay.io/datawire/ambassador-base:envoy-11
+AMBASSADOR_DOCKER_IMAGE_CACHED ?= quay.io/datawire/ambassador-base:go-12
+AMBASSADOR_BASE_IMAGE ?= quay.io/datawire/ambassador-base:ambassador-12
 
 # Default to _NOT_ using Kubernaut. At Datawire, we can set this to true,
 # but outside, it works much better to assume that user has set up something
@@ -155,15 +155,20 @@ SCOUT_APP_KEY=
 
 # Sets the kat-backend release which contains the kat-client use for E2e testing.
 # For details https://github.com/datawire/kat-backend
-KAT_BACKEND_RELEASE = 1.4.1
+KAT_BACKEND_RELEASE = 1.4.2-rc
 
 # Allow overriding which watt we use.
 WATT ?= watt
-WATT_VERSION ?= 0.4.10
+WATT_VERSION ?= 0.5.1
 
 # "make" by itself doesn't make the website. It takes too long and it doesn't
 # belong in the inner dev loop.
-all: setup-develop docker-push test
+all:
+	$(MAKE) setup-develop
+	$(MAKE) docker-push
+	$(MAKE) test
+
+include build-aux/prelude.mk
 
 clean: clean-test
 	rm -rf docs/_book docs/_site docs/package-lock.json
@@ -279,6 +284,7 @@ kill-docker-registry:
 	fi
 
 envoy: .FORCE
+	@echo "Getting Envoy sources..."
 	git init $@
 	cd $@ && \
 	if git remote get-url origin &>/dev/null; then \
@@ -288,7 +294,9 @@ envoy: .FORCE
 	fi && \
 	git fetch --tags origin && \
 	$(if $(filter-out -,$(ENVOY_COMMIT)),git checkout $(ENVOY_COMMIT),if ! git rev-parse HEAD >/dev/null 2>&1; then git checkout origin/master; fi)
+
 envoy-build-image.txt: .FORCE envoy
+	@echo "Making $@..."
 	set -e; \
 	cd envoy; . ci/envoy_build_sha.sh; cd ..; \
 	echo docker.io/envoyproxy/envoy-build-ubuntu:$$ENVOY_BUILD_SHA > .tmp.$@.tmp; \
@@ -317,11 +325,23 @@ envoy-shell: envoy-build-image.txt
 	docker run --rm --privileged --volume=envoy-build:/root:rw --workdir=/root/envoy -it $$(cat envoy-build-image.txt)
 .PHONY: envoy-shell
 
-docker-base-images: envoy-bin/envoy-static-stripped
+docker-base-images:
 	@if [ -n "$(AMBASSADOR_DEV)" ]; then echo "Do not run this from a dev shell" >&2; exit 1; fi
-	docker build $(DOCKER_OPTS) -t $(ENVOY_BASE_IMAGE) -f Dockerfile.envoy .
-	docker build --build-arg ENVOY_BASE_IMAGE=$(ENVOY_BASE_IMAGE) $(DOCKER_OPTS) -t $(AMBASSADOR_DOCKER_IMAGE_CACHED) -f Dockerfile.cached .
-	docker build --build-arg ENVOY_BASE_IMAGE=$(ENVOY_BASE_IMAGE) $(DOCKER_OPTS) -t $(AMBASSADOR_BASE_IMAGE) -f Dockerfile.ambassador .
+	@if ! docker run --rm --entrypoint=true $(ENVOY_BASE_IMAGE); then \
+		echo "Building Envoy binary..." ;\
+		if $(MAKE) envoy-bin/envoy-static-stripped; then \
+			echo "Building Envoy Docker image..." ;\
+		    docker build $(DOCKER_OPTS) -t $(ENVOY_BASE_IMAGE) -f Dockerfile.envoy . ;\
+		fi ;\
+	fi
+	@if ! docker run --rm --entrypoint=true $(AMBASSADOR_DOCKER_IMAGE_CACHED); then \
+		echo "Building $(AMBASSADOR_DOCKER_IMAGE_CACHED)" ;\
+		docker build --build-arg ENVOY_BASE_IMAGE=$(ENVOY_BASE_IMAGE) $(DOCKER_OPTS) -t $(AMBASSADOR_DOCKER_IMAGE_CACHED) -f Dockerfile.cached . ;\
+	fi
+	@if ! docker run --rm --entrypoint=true $(AMBASSADOR_BASE_IMAGE); then \
+		echo "Building $(AMBASSADOR_BASE_IMAGE)" ;\
+		docker build --build-arg ENVOY_BASE_IMAGE=$(ENVOY_BASE_IMAGE) $(DOCKER_OPTS) -t $(AMBASSADOR_BASE_IMAGE) -f Dockerfile.ambassador . ;\
+	fi
 	@echo "RESTART ANY DEV SHELLS to make sure they use your new images."
 
 docker-push-base-images:
@@ -331,7 +351,9 @@ docker-push-base-images:
 	docker push $(AMBASSADOR_BASE_IMAGE)
 	@echo "RESTART ANY DEV SHELLS to make sure they use your new images."
 
-docker-update-base: docker-base-images docker-push-base-images
+docker-update-base:
+	$(MAKE) docker-base-images go/apis/envoy
+	$(MAKE) docker-push-base-images
 
 ambassador-docker-image: version $(WATT)
 	docker build --build-arg AMBASSADOR_BASE_IMAGE=$(AMBASSADOR_BASE_IMAGE) --build-arg CACHED_CONTAINER_IMAGE=$(AMBASSADOR_DOCKER_IMAGE_CACHED) $(DOCKER_OPTS) -t $(AMBASSADOR_DOCKER_IMAGE) .
@@ -400,14 +422,14 @@ ambassador/ambassador/VERSION.py:
 version: ambassador/ambassador/VERSION.py
 
 TELEPROXY=venv/bin/teleproxy
-TELEPROXY_VERSION=0.4.9
+TELEPROXY_VERSION=0.4.11
 
 # This should maybe be replaced with a lighterweight dependency if we
 # don't currently depend on go
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
 
-$(TELEPROXY):
+$(TELEPROXY): | venv/bin/activate
 	curl -o $(TELEPROXY) https://s3.amazonaws.com/datawire-static-files/teleproxy/$(TELEPROXY_VERSION)/$(GOOS)/$(GOARCH)/teleproxy
 	sudo chown root $(TELEPROXY)
 ifeq ($(shell uname -s), Darwin)
@@ -444,18 +466,17 @@ $(CLAIM_FILE):
 		echo kat-$${USER}-$(shell uuidgen) > $@; \
 	fi
 
-$(KUBERNAUT):
+$(KUBERNAUT): | venv/bin/activate
 	curl -o $(KUBERNAUT) http://releases.datawire.io/kubernaut/$(KUBERNAUT_VERSION)/$(GOOS)/$(GOARCH)/kubernaut
 	chmod +x $(KUBERNAUT)
 
 KAT_CLIENT=venv/bin/kat_client
 
-$(KAT_CLIENT):
-	curl -OL https://github.com/datawire/kat-backend/archive/v$(KAT_BACKEND_RELEASE).tar.gz
-	tar xzf v$(KAT_BACKEND_RELEASE).tar.gz
-	chmod +x kat-backend-$(KAT_BACKEND_RELEASE)/client/bin/client_$(GOOS)_$(GOARCH)
-	mv kat-backend-$(KAT_BACKEND_RELEASE)/client/bin/client_$(GOOS)_$(GOARCH) $(PWD)/$(KAT_CLIENT)
-	rm -rf v$(KAT_BACKEND_RELEASE).tar.gz kat-backend-$(KAT_BACKEND_RELEASE)/
+venv/kat-backend-$(KAT_BACKEND_RELEASE).tar.gz: | venv/bin/activate
+	curl -L -o $@ https://github.com/datawire/kat-backend/archive/v$(KAT_BACKEND_RELEASE).tar.gz
+$(KAT_CLIENT): venv/kat-backend-$(KAT_BACKEND_RELEASE).tar.gz
+	cd venv && tar -xzf $(<F) kat-backend-$(KAT_BACKEND_RELEASE)/client/bin/client_$(GOOS)_$(GOARCH)
+	install -m0755 venv/kat-backend-$(KAT_BACKEND_RELEASE)/client/bin/client_$(GOOS)_$(GOARCH) $(CURDIR)/$(KAT_CLIENT)
 
 setup-develop: venv $(KAT_CLIENT) $(TELEPROXY) $(KUBERNAUT) $(WATT) version
 
@@ -468,13 +489,13 @@ endif
 
 setup-test: cluster-and-teleproxy
 
-cluster-and-teleproxy: cluster.yaml
+cluster-and-teleproxy: cluster.yaml $(TELEPROXY)
 	rm -rf /tmp/k8s-*.yaml
 	$(MAKE) teleproxy-restart
 	@echo "Sleeping for Teleproxy cluster"
 	sleep 10
 
-teleproxy-restart:
+teleproxy-restart: $(TELEPROXY)
 	@echo "Killing teleproxy"
 	$(kill_teleproxy)
 	sleep 0.25 # wait for exit...
@@ -568,6 +589,68 @@ release:
 		printf "'make release' can only be run for a GA commit when VERSION is not the same as GIT_COMMIT!\n"; \
 		exit 1; \
 	fi
+
+# ------------------------------------------------------------------------------
+# Go gRPC bindings
+# ------------------------------------------------------------------------------
+
+PROTOC_VERSION = 3.5.1
+PROTOC_PLATFORM = $(patsubst darwin,osx,$(GOOS))-$(patsubst amd64,x86_64,$(patsubst 386,x86_32,$(GOARCH)))
+
+venv/protoc-$(PROTOC_VERSION)-$(PROTOC_PLATFORM).zip: | venv/bin/activate
+	curl -o $@ --fail -L https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(@F)
+venv/bin/protoc: venv/protoc-$(PROTOC_VERSION)-$(PROTOC_PLATFORM).zip
+	bsdtar -xf $< -C venv bin/protoc
+
+venv/bin/protoc-gen-gogofast: go.mod | venv/bin/activate
+	$(FLOCK) go.mod go build -o $@ github.com/gogo/protobuf/protoc-gen-gogofast
+
+venv/bin/protoc-gen-validate: go.mod | venv/bin/activate
+	$(FLOCK) go.mod go build -o $@ github.com/envoyproxy/protoc-gen-validate
+
+# Search path for .proto files
+gomoddir = $(shell $(FLOCK) go.mod go list $1/... >/dev/null 2>/dev/null; $(FLOCK) go.mod go list -m -f='{{.Dir}}' $1)
+imports += $(CURDIR)/envoy/api
+imports += $(call gomoddir,github.com/envoyproxy/protoc-gen-validate)
+imports += $(call gomoddir,github.com/gogo/protobuf)
+imports += $(call gomoddir,github.com/gogo/protobuf)/protobuf
+imports += $(call gomoddir,istio.io/gogo-genproto)/prometheus
+imports += $(call gomoddir,istio.io/gogo-genproto)/googleapis
+imports += $(call gomoddir,istio.io/gogo-genproto)/opencensus/proto/trace/v1
+
+# Map from .proto files to Go package names
+mappings += gogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto
+mappings += google/api/annotations.proto=github.com/gogo/googleapis/google/api
+mappings += google/api/http.proto=github.com/gogo/googleapis/google/api
+mappings += google/protobuf/any.proto=github.com/gogo/protobuf/types
+mappings += google/protobuf/duration.proto=github.com/gogo/protobuf/types
+mappings += google/protobuf/empty.proto=github.com/gogo/protobuf/types
+mappings += google/protobuf/struct.proto=github.com/gogo/protobuf/types
+mappings += google/protobuf/timestamp.proto=github.com/gogo/protobuf/types
+mappings += google/protobuf/wrappers.proto=github.com/gogo/protobuf/types
+mappings += google/rpc/code.proto=github.com/gogo/googleapis/google/rpc
+mappings += google/rpc/error_details.proto=github.com/gogo/googleapis/google/rpc
+mappings += google/rpc/status.proto=github.com/gogo/googleapis/google/rpc
+mappings += metrics.proto=istio.io/gogo-genproto/prometheus
+mappings += trace.proto=istio.io/gogo-genproto/opencensus/proto/trace/v1
+mappings += $(shell find $(CURDIR)/envoy/api/envoy -type f -name '*.proto' | sed -E 's,^$(CURDIR)/envoy/api/((.*)/[^/]*),\1=github.com/datawire/ambassador/go/apis/\2,')
+
+joinlist=$(if $(word 2,$2),$(firstword $2)$1$(call joinlist,$1,$(wordlist 2,$(words $2),$2)),$2)
+comma = ,
+
+go/apis/envoy: envoy venv/bin/protoc venv/bin/protoc-gen-gogofast venv/bin/protoc-gen-validate
+	rm -rf $@
+	mkdir -p $@
+	set -e; find $(CURDIR)/envoy/api/envoy -type f -name '*.proto' | sed 's,/[^/]*$$,,' | uniq | while read -r dir; do \
+		echo "Generating $$dir"; \
+		./venv/bin/protoc \
+			$(addprefix --proto_path=,$(imports))  \
+			--plugin=$(CURDIR)/venv/bin/protoc-gen-gogofast --gogofast_out='$(call joinlist,$(comma),plugins=grpc $(addprefix M,$(mappings))):$(@D)' \
+			--plugin=$(CURDIR)/venv/bin/protoc-gen-validate --validate_out='lang=gogo:$(@D)' \
+			"$$dir"/*.proto; \
+	done
+# https://github.com/envoyproxy/go-control-plane/issues/173
+	find $@ -name '*.validate.go' -exec sed -E -i 's,"(envoy/.*)"$$,"github.com/datawire/ambassador/go/apis/\1",' {} +
 
 # ------------------------------------------------------------------------------
 # Virtualenv
