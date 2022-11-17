@@ -516,6 +516,13 @@ class V3Listener:
                     "headers_with_underscores_action": self.config.ir.ambassador_module.headers_with_underscores_action
                 }
 
+        # Set http2 options based on Envoy's recommendations for running it as an edge proxy
+        base_http_config["http2_protocol_options"] = {
+              "max_concurrent_streams": 100,
+              "initial_connection_window_size": 1048576,
+              "initial_stream_window_size": 65536,
+        }
+
         max_request_headers_kb = self.config.ir.ambassador_module.get(
             "max_request_headers_kb", None
         )
